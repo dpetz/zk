@@ -1,7 +1,9 @@
 (ns zk.core-test
   (:require [clojure.test :refer :all]
-            [zk.core :refer :all]))
+            [zk.core :refer :all])) ; [clojure.spec.alpha :as s]
 
-(deftest a-test
-  (testing "FIXME, I fail."
-    (is (= 0 1))))
+(deftest tag-titles
+  (testing "Fetching 3 tag titles"
+    (let [tags (tags-all [:title] {:limit 3})]
+      (is(= 3 (count tags)))
+      (is (every? string? tags)))))
