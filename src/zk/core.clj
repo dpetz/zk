@@ -32,6 +32,10 @@
            :order_dir " DESC"}
           overwrites)))
 
+(defn only
+  "if collection has single item returns it, otherwise nil"
+  [col] (case (count col) 1 (first col) nil))
+
 (defn auth-get
   "If single field, returns collection of values"
   [verb fields params] 
@@ -42,18 +46,19 @@
         response
         (http/get (str port verb) {:accept :json :query-params params-enriched})
 
-        {:strs [items has_more]}
-        (json/read-str (:body response))] 
-    (cond
-      (= 1 (count fields))
-          (let [field (name (first fields))] (map #(% field) #break items)) ; [{"title" "youtube"} ..] 
-          :else (eval items))))
+        {:keys [items has_more]}
+        (walk/keywordize-keys (json/read-str (:body response)))]
+    
+
+    (if-let [field (only fields)]
+      (map #(% field) items) ; [{:title "youtube"} ..] 
+      (items))))
 
   (defn tags-all 
     ([fields params] 
      (auth-get "tags" fields params)) ; no query parameters
     ([] (tags-all [:id :parent_id :title] {})))
   
-;(println (tags-all [:title] {:limit 10}))
+(println (tags-all [:title] {:limit 1}))
 
 
