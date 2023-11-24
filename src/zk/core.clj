@@ -25,40 +25,57 @@
 
 (defn default-params
   [overwrites]
-  (walk/stringify-keys 
-   (merge {:page 0 ; 0 for `all`
-           :limit 100 ; 100 is max   
-           :order_by "updated_time" 
+   (merge {:page 1
+           :limit 100 
+           :order_by "updated_time"
            :order_dir " DESC"}
-          overwrites)))
+          overwrites))
 
 (defn only
   "if collection has single item returns it, otherwise nil"
   [col] (case (count col) 1 (first col) nil))
 
+(defn if-single-key-drop-it
+  "E.g. [{:title \"youtube\"} ..] to [\"youtube\" ..]. Otherwise unchanged."
+  [col keys]
+  (if-let [key (only keys)]
+    (map #(% key) col)
+    (col)))
+
+(defn syms-to-str [col] (str/join "," (map name col)))
+
+
 (defn auth-get
   "If single field, returns collection of values"
-  [verb fields params] 
-  {:pre [ (coll? fields) (map? params)]} 
-  (let [params-enriched
-        (default-params (merge params {:token token :fields (str/join "," (map name fields))}))
-
-        response
-        (http/get (str port verb) {:accept :json :query-params params-enriched})
-
-        {:keys [items has_more]}
-        (walk/keywordize-keys (json/read-str (:body response)))]
-    
-
-    (if-let [field (only fields)]
-      (map #(% field) items) ; [{:title "youtube"} ..] 
-      (items))))
-
-  (defn tags-all 
-    ([fields params] 
-     (auth-get "tags" fields params)) ; no query parameters
-    ([] (tags-all [:id :parent_id :title] {})))
+  [verb fields params]
+  {:pre [(coll? fields) (map? params)]}
   
-(println (tags-all [:title] {:limit 1}))
+(let [params-all (default-params (assoc params :token token :fields (syms-to-str fields)))]
+
+  (loop [cache []
+         pars (update params-all :limit #(min % 100))
+         gap (params-all :limit)]
+    (let [response 
+          (http/get (str port verb) {:accept :json :query-params (walk/stringify-keys pars)})
+
+          {:keys [items has_more]}
+          (walk/keywordize-keys (json/read-str (:body response)))
+
+          cached
+          (concat cache (if-single-key-drop-it items fields))
+
+          gap-new
+          (- gap (count items))]
 
 
+      (if (and has_more (pos? gap-new))
+        (recur cached (update pars :page #(inc %)) gap-new)
+        cached)))))
+                 
+                 
+  (defn tags-all
+            ([fields params]
+             (auth-get "tags" fields params)) ; no query parameters
+            ([] (tags-all [:id :parent_id :title] {})))
+
+    (count (tags-all [:title] {:limit 150}))
