@@ -2,25 +2,12 @@
   (:require [clj-http.client :as http]
             [clojure.data.json :as json]
             [clojure.string :as str]
-            [clojure.walk :as walk])
-  (:gen-class))
+            [clojure.walk :as walk]))
 
 ; https://joplinapp.org/help/api/references/rest_api/
 (def port "http://localhost:41184/")
 (def token "dcd2cbd0584a6c9d3b494c2ae78b0fc56255c1134b2ab8da8ffabbe78a7dcb28bda4f29360789d2c98d295283147af3f1515538986009fbdb143041de2403a95")
 
-(def data-model
-  {:tag [:id
-         :title
-         :created_time
-         :updated_time
-         :user_created
-         :user_updated_time
-         :encryption_cipher
-         :encryption_applied
-         :is_shared
-         :parent_id
-         :user_data]})
 
 
 (defn default-params
@@ -35,12 +22,14 @@
   "if collection has single item returns it, otherwise nil"
   [col] (case (count col) 1 (first col) nil))
 
+(only [])
+
 (defn if-single-key-drop-it
   "E.g. [{:title \"youtube\"} ..] to [\"youtube\" ..]. Otherwise unchanged."
   [col keys]
   (if-let [key (only keys)]
     (map #(% key) col)
-    (col)))
+    col))
 
 (defn syms-to-str [col] (str/join "," (map name col)))
 
@@ -75,7 +64,13 @@
                  
   (defn tags-all
             ([fields params]
-             (auth-get "tags" fields params)) ; no query parameters
-            ([] (tags-all [:id :parent_id :title] {})))
+             (auth-get "tags" fields params)) ; no query parameters 
+            ([] (tags-all (data-model :tag) {:limit 99999})))
 
-    (count (tags-all [:title] {:limit 150}))
+  (defn notes-all
+    ([fields params]
+     (auth-get "tags" fields params)) ; no query parameters 
+    ([] (tags-all (data-model :tag) {:limit 99999})))
+
+
+    (println (tags-all))
