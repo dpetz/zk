@@ -1,5 +1,6 @@
 (ns zk.model
-  (:require [clojure.spec.alpha :as s] [clojure.string :as str]))
+  (:require [clojure.spec.alpha :as s] [clojure.string :as str])
+  (:gen-class))
 
 ; https://joplinapp.org/help/api/references/rest_api#properties
 
@@ -21,7 +22,6 @@
 (s/def ::is_todo integer?) ; Tells whether this note is a todo or not.
 (s/def ::todo_due integer?) ; When the todo is due. An alarm will be triggered on that date.
 (s/def ::todo_completed integer?) ; Tells whether todo is completed or not. This is a timestamp in milliseconds.
-
 (s/def ::source string?)
 (s/def ::source_application string?)
 (s/def ::application_data string?)
@@ -42,17 +42,6 @@
 (s/def ::crop_rect string?) ; If an image is provided, you can also specify an optional rectangle that will be used to crop the image. In format { x: x, y: y, width: width, height: height }
 
 ; TAGS (additional)
-;
-
-
-
-
-(defn spec-list
-  ([prefix]
-   (map #(str prefix %) (sort (map name (filter #(str/starts-with? % ":zk.model") (keys (s/registry)))))))
-  ([] (spec-list "::")))
-
-(println (spec-list))
 
 (s/def ::note
   (s/keys :req-un [::id]
@@ -69,8 +58,30 @@
           :opt-un [::title ::created_time ::updated_time ::user_created_time ::user_updated_time
                    ::encryption_applied ::is_shared ::parent_id ::user_data
                   ; ::encryption_cipher --> error HTTP status: 500
-                  ]))
+                   ]))
 
-(type (first (ns-interns 'zk.model)))
+(defn successor 
+  "successor of first occurence of `item` in `coll` or `nil`"
+  [item coll]
+  (let [ix (.indexOf coll item)]
+    ( if (= ix -1) nil (coll (inc ix)))))
+
+(defn spec-keys
+  [spec-symbol]
+  (let [spec-form (vec (s/form (s/get-spec spec-symbol)))]
+   (flatten (filter some? (map #(successor % spec-form) [:req :req-un :opt :opt-un])))))
 
 
+(defn list-specs
+  ([prefix]
+   (map #(str prefix %)
+        (sort (map name (filter #(str/starts-with? % ":zk.model") (keys (s/registry)))))))
+  ([] (list-specs "::")))
+
+
+(defmacro spec-group-keys
+  [old-spec group new-spec]
+  (list 's/def new-spec (list 's/keys group (vec (spec-keys old-spec)))))
+
+
+;  (s/describe (spec-group-keys ::tag :req-un ::temp))
