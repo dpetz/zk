@@ -21,6 +21,6 @@
         )))
 
 
-(run-tests 'zk.core-test)
+;(run-tests 'zk.core-test)
 
 ;(s/conform (s/coll-of :zk.model/tag) (core/tag-list [] {}))
