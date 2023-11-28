@@ -2,10 +2,13 @@
   (:require [clj-http.client :as http]
             [clojure.data.json :as json]
             [clojure.string :as str]
+            [clojure.java.io :as io]
             [clojure.walk :as walk]
-            [cybermonday.core :as cyber]
+            
             [clojure.spec.alpha :as s])
-  (:require [zk.model :as model] :reload)) ; (:use [clojure.tools.logging])
+  (:require [zk.model :as model]
+            [cybermonday.core] [cybermonday.ir] [cybermonday.parser] ; my forks
+            :reload)) ; (:use [clojure.tools.logging])
 
 ; https://joplinapp.org/help/api/references/rest_api/
 (def port "http://localhost:41184/")
@@ -39,7 +42,7 @@
   [coll]
   (if (empty? (rest coll)) (first coll) coll))
 
-(def INFO true)
+(def INFO false)
 
 (defn auth-get
   "If single field, returns collection of values. Empty fields vector for standard fields"
@@ -48,7 +51,7 @@
 
    (let [params-all (default-params (assoc params :token token :fields (syms-to-str fields)))]
 
-     (loop [cache []
+     (loop [cache [] 
             pars (update params-all :limit #(min % 100))
             gap (params-all :limit)]
        (let [response ; save-request? true :debug true 
@@ -129,9 +132,10 @@
 
 
 (def author-id "19a0bb1074c9477b8204fb0d8e4baef5")
-(def book-id "f37effc03aa042399db702484c6cda61")
-(def book-body (note book-id))
 (def author-body (:body (note author-id)))
 
-;(println author-body)
-(pprint (cyber/parse-md author-body))
+
+(pprint author-body)
+
+
+(pprint (cybermonday.ir/md-to-ir author-body)) ; cybermonday.ir/md-to-ir ; cybermonday.core/parse-md
