@@ -41,6 +41,19 @@
 (s/def ::crop_rect string?) ; If an image is provided, you can also specify an optional rectangle that will be used to crop the image. In format { x: x, y: y, width: width, height: height }
 
 
+(s/def ::items (s/coll-of map?))
+(s/def ::has_more boolean?)
+(s/def ::response-items 
+  (s/keys :req-un [::items ::has_more]) )
+
+
+(def response-example
+  {:items [{:id "2873917c86b44a55af4feec8b0024e53",
+            :parent_id "02d6c6e4fdda4f49bdd3a2291ba6d303"}]
+   :has_more false})
+
+;(s/explain ::response-items response-example)
+
 (def item-types
   {:note 1
    :folder 2

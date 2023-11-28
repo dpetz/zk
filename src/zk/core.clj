@@ -2,8 +2,11 @@
   (:require [clj-http.client :as http]
             [clojure.data.json :as json]
             [clojure.string :as str]
-            [clojure.walk :as walk])
-  (:require [zk.model :as model] :reload))
+            [clojure.walk :as walk] 
+            [cybermonday.core :as cyber]
+            [clojure.spec.alpha :as s])
+  (:require [zk.model :as model] :reload)
+  ) ; (:use [clojure.tools.logging])
 
 ; https://joplinapp.org/help/api/references/rest_api/
 (def port "http://localhost:41184/")
@@ -36,64 +39,93 @@
   [coll]
   (if (empty? (rest coll)) (first coll) coll))
 
+(def INFO true)
+
 (defn auth-get
   "If single field, returns collection of values. Empty fields vector for standard fields"
-  [verb fields params]
-  {:pre [(coll? fields) (map? params)]}
+  ([verb fields params]
+   {:pre [(coll? fields) (map? params)]}
 
-  (let [params-all (default-params (assoc params :token token :fields (syms-to-str fields)))]
+   (let [params-all (default-params (assoc params :token token :fields (syms-to-str fields)))]
 
-    (loop [cache []
-           pars (update params-all :limit #(min % 100))
-           gap (params-all :limit)]
-      (let [response
-            (http/get (str port verb) {:accept :json :query-params (walk/stringify-keys pars)})
+     (loop [cache []
+            pars (update params-all :limit #(min % 100))
+            gap (params-all :limit)]
+       (let [response ; save-request? true :debug true 
+             (http/get (str port verb) {:accept :json :query-params (walk/stringify-keys pars)})
 
-            {:keys [items has_more]}
-            (walk/keywordize-keys (json/read-str (:body response)))
+             body
+             (walk/keywordize-keys  (json/read-str (:body response))) ; 
 
-            cached
-            (concat cache (take gap (if-single-key-drop-it items fields)))
+             {:keys [items has_more]}
+             (if (s/valid? :zk.model/response-items body) body {:items body :has_more 0})
 
-            gap-new
-            (- gap (count items))]
+             cached
+             (concat cache (take gap (if-single-key-drop-it items fields)))
+
+             gap-new
+             (- gap (count items))]
+
+           (when INFO (println (str/upper-case verb)  body)) 
+           (if (and has_more (pos? gap-new))
+             (recur cached (update pars :page #(inc %)) gap-new)
+             (unwrap-if-alone  cached))))))
+
+  ([verb fields]
+   (auth-get verb fields {})))
 
 
-        (if (and has_more (pos? gap-new))
-          (recur cached (update pars :page #(inc %)) gap-new)
-          (unwrap-if-alone cached))))))
+(let [m {1 2 3 4}] 
+  (if (map? m) m 0))
 
-(empty (rest [1 2]))
+; ========== NOTES ==========
 
-(defn note-list
+(def note-keys
+  (model/spec-keys :zk.model/note))
+
+(defn notes
   ([fields params]
    (auth-get "notes" fields params))
-  ([fields] (note-list fields {}))
-  ([] (note-list (model/spec-keys :zk.model/note))))
+  ([fields] (notes fields {}))
+  ([] (notes note-keys)))
+
+(defn note [id]
+  (auth-get (str "notes/" id) [] {})); note-keys
+
+; ========== TAGS ==========
 
 
-(defn tag-list
+(defn tags
   ([fields params]
    (auth-get "tags" fields params))
-  ([] (tag-list (model/spec-keys :zk.model/tag) {})))
+  ([] (tags (model/spec-keys :zk.model/tag) {})))
 
-   ; https://joplinapp.org/help/#searching
+
+
+; ========== SEARCH ==========
+
+
+; https://joplinapp.org/help/#searching
 ; GET /search?query=recipes&type=folder
 (defn search
-  ( [query type]
+  ([query type fields]
    {:pre [(contains? zk.model/item-types type)]}
-    (auth-get "search" [] {:query query :type (name type)}))
-  ( [query]
+   (auth-get "search" fields {:query query :type (name type)}))
+  ([query type]
+   (search query type []))
+  ([query]
    (search query :note)))
-  
 
 
-  (def meta-id
-    (get (search "Meta" :folder) :id))
 
-(def meta-notes
-  (search (str "notebook:Meta")))
+; ========== STAGE ==========
 
 
-(println meta-notes)
-  
+(def book-id "f37effc03aa042399db702484c6cda61");
+
+(println (search "notebook:Meta")) ; title:Book
+;(println (note book-id))
+
+
+
+  ;(cyber.core/parse-md my-markdown)
