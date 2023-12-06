@@ -11,6 +11,9 @@
                 ;[com.vladsch.flexmark/flexmark "0.64.8"]
                  [com.vladsch.flexmark/flexmark-ext-definition "0.64.8"]
                  [cybermonday "0.1-fork"] ; "0.6.213" ; com.kiranshila/
+                 [org.clj-commons/hickory "0.7.3"]
+                 [hiccup "2.0.0-RC2"]
+                 [org.clojars.quoll/asami "2.3.4"]
                  ]
   :main ^:skip-aot zk.core
   :target-path "target/%s"
