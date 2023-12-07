@@ -10,14 +10,18 @@
    [clojure.zip :as zip]
    [hickory.select :as hys]
    [hickory.convert :refer [hiccup-to-hickory hiccup-fragment-to-hickory]]
-   )
-  
+
+   [clojure.string :as str])
+
   (:require ; my forks
-   [cybermonday.core :refer [parse-body]] ; don't need :frontmatter
+   [cybermonday.core :refer [parse-body]] ; ignore :frontmatter
    ;[cybermonday.ir]
-   [cybermonday.parser] ; list here to force reload 
-   :reload)
-  )
+   [cybermonday.parser] ; force reload 
+   :reload))
+
+(defn hiccup-to-html [v] (str (h2/html v)))
+
+
 
 
 
@@ -31,45 +35,76 @@
 (def note-body (:body (jop/note note-id)))
 
 ;(pprint (cybermonday.ir/md-to-ir note-body)) ; hiccup vector
-;(pprint (str (hp/html (:body (cybermonday.core/parse-md note-body)))))
 
-(def note-html (str (h2/html (parse-body note-body)))) ; drop :frontmatter
-(pprint note-html)
+(def note-hiccup (parse-body note-body))
+(pprint note-hiccup)
 
-
-
-(defn tag-contents
-  [html tag]
-  ; (?<= ) text after, (?=< ) text before 
-  ;(println tag html)
-  (map #(first %)
-   (re-seq (re-pattern (str "(?<=<" tag ">)(.|\n)*?(?=</" tag ">)")) html)))
-
-(defn description-pairs
-  "Scans hiccup for html description lists returnd sequence of 
-   all :dt and :dd content pairs"
-  [html-content]
-
-(let
-
- term-chunks (fn [html]
-              (tag-contents (map #(str "<dt>" %) (s/split html #"<dt>"))))
-
-   [dt-dd-pairs
-        (fn
-          [html]
-          (let [dt (tag-contents html "dt")] 
-            (assert (= 1 (count dt)) (str "Expected single <dt>: " html))
-            (map
-             #(vector (first dt) %)
-             (tag-contents html "dd"))))]
-    
-    (reduce
-     #(concat %1 (dt-dd-pairs %2)) []
-     ; swap from regex to clojure.zip for nested dls (allowed?) 
-     (tag-contents html-content "dl"))))
+; see https://pandoc.org/MANUAL.html#definition-lists
+; pandoc's defintions are called descriptions in HTML5 
+; terms are single line
+; 1+ defs per term
+; defs may contain blocks (lists, code, etc.)
+; even dts may branch du to html formatting
+;
+; parsing logic
+; 1 pair per dd
+; for each dt/dd: returns first note id; otherwise html
+; order maintained but not dl boundaries
 
 
-(pprint (description-pairs note-html))
+;https://grishaev.me/en/clojure-zippers/
+(defn iter-zip [zipper]
+  "Walks through depth-first"
+  (->> zipper
+       (iterate zip/next)
+       (take-while (complement zip/end?))))
 
+(defn hrefs
+  "Collects href value for each :a element"
+  [hiccup]
+  (->> hiccup 
+       zip/vector-zip
+       iter-zip
+       (reduce #(if (= :a (zip/node %2))
+                  (conj %1 (:href (zip/node (zip/right %2)))) %1) [])))
+
+(defn note-ids
+  "From collection such as
+   [\"https://leanpub.com/clojureai\" \":/f37effc03aa042399db702484c6cda61\"]
+  returns [\"f37effc03aa042399db702484c6cda61\"]"
+  [col]
+  (->> col
+       (filter #(s/starts-with? % ":/"))
+       (map #(subs % 2))))
+
+
+(defn id-or-html
+  "If hiccup contains any nested note ids return the first; otherwise html"
+  [hiccup]
+  (let [ ids (note-ids (hrefs hiccup))] 
+       (if (empty? ids)
+         (hiccup-to-html hiccup)
+        (first ids))))
+
+
+(defn dt-dd-pairs
+  ([loc dt pairs]
+     (cond
+       (zip/end? loc)
+       pairs
+       (= :dt (zip/node loc))
+       (do
+         (println "INFO " pairs)
+         (recur (zip/next loc) (id-or-html (zip/node (zip/rightmost loc))) pairs))
+       (= :dd (zip/node loc))
+       (recur (zip/next loc) dt
+              (conj pairs (vector dt (id-or-html (vec (cons :div (rest (zip/node (zip/up loc)))))))))
+       :else
+       (recur (zip/next loc) dt pairs))) 
+
+  ([hiccup] (dt-dd-pairs (zip/vector-zip hiccup) nil [])))
+
+
+(pprint (note-ids (hrefs note-hiccup)))
+(pprint (dt-dd-pairs note-hiccup))
 
