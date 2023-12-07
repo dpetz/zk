@@ -105,10 +105,7 @@
    (auth-get "tags" fields params))
   ([] (tags tag-keys {})))
 
-
-
 ; ========== SEARCH ==========
-
 
 ; https://joplinapp.org/help/#searching
 ; GET /search?query=recipes&type=folder
