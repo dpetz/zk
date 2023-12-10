@@ -22,9 +22,9 @@
 
 (deftest search
   (testing "Search folder id"
-    (is (= (:title (jop/search "Zettel" :folder)) "Zettel"))))
+    (is (= (:title (jop/search "Zettel" :jop/folder)) "Zettel"))))
 (testing "Meta contains `✒️ author`"
-  (is (some #{"✒️ author"} (jop/search (str "notebook:Meta") :note [:title]))))
+  (is (some #{"✒️ author"} (jop/search (str "notebook:Meta") :jop/note [:title]))))
 
 
 (run-tests 'zk.joplin-test)

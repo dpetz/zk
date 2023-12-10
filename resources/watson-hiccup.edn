@@ -1,0 +1,49 @@
+; note [Watson (2023). Practical AI with Clojure](:/028e98cdc99f4f249ea8eee7b8fbfb18)
+[:div
+ {}
+ [:p
+  {}
+  "free "
+  [:a {:href "https://leanpub.com/clojureai", :title nil} "online"]]
+ [:p
+  {}
+  [:img
+   {:src ":/1b6a787f16f2466aa566b99c11005f0b", :alt nil, :title nil}]]
+ [:dl
+  {}
+  [:dt
+   {}
+   [:p
+    {}
+    [:a
+     {:href ":/f37effc03aa042399db702484c6cda61", :title nil}
+     "📖 Book"]]]
+  [:dd {} [:p {} "Watson (2023)."]]
+  [:dd
+   {}
+   [:p
+    {}
+    [:em {} "Practical"]
+    " "
+    [:a {:href ":/6131edc007f94d2798cf7da510157d05", :title nil} "AI"]
+    " with Clojure"]]
+  [:dt
+   {}
+   [:p
+    {}
+    [:a
+     {:href ":/8fe22e1c91c740b6a836ba98e19f1258", :title nil}
+     "🗯️ title"]]]
+  [:dd
+   {}
+   [:p {} "Practical Artificial Intelligence Programming"]
+   [:pre {} [:code {:class "language-"} "some code"]]
+   [:p {} "With Clojure"]]
+  [:dt
+   {}
+   [:p
+    {}
+    [:a
+     {:href ":/19a0bb1074c9477b8204fb0d8e4baef5", :title nil}
+     "✒️ author"]]]
+  [:dd {} [:p {} "Mark Watson"]]]]

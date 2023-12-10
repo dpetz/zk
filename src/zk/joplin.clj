@@ -1,9 +1,9 @@
 (ns zk.joplin
   (:require [clj-http.client :as http]
-             [clojure.data.json :as json]
-             [clojure.string :as str] 
-             [clojure.walk :as walk] 
-             [clojure.spec.alpha :as s])
+            [clojure.data.json :as json]
+            [clojure.string :as str]
+            [clojure.walk :as walk]
+            [clojure.spec.alpha :as s])
    (:require [zk.model :as model]
                           :reload)) ; (:use [clojPure.tools.logging])
 
@@ -61,7 +61,7 @@
              (walk/keywordize-keys  (json/read-str (:body response))) ; 
 
              {:keys [items has_more]}
-             (if (s/valid? :zk.model/response-items body) body {:items (vector body) :has_more false})
+             (if (s/valid? :jop/response-items body) body {:items (vector body) :has_more false})
 
              cached
              (concat cache (take gap (if-single-key-drop-it items)))
@@ -82,7 +82,7 @@
 ; ========== NOTES ==========
 
 (def note-keys
-  (model/spec-keys :zk.model/note))
+  (model/spec-keys :jop/note))
 
 (defn notes
   ([fields params]
@@ -98,7 +98,7 @@
 ; ========== TAGS ==========
 
 (def tag-keys
-  (model/spec-keys :zk.model/tag))
+  (model/spec-keys :jop/tag))
 
 (defn tags
   ([fields params]
@@ -110,10 +110,10 @@
 ; https://joplinapp.org/help/#searching
 ; GET /search?query=recipes&type=folder
 (defn search
-  ([query type fields]
+  ([query type fields params]
    {:pre [(contains? zk.model/item-types type)]}
-   (auth-get "search" fields {:query query :type (name type)}))
+   (auth-get "search" fields (merge {:query query :type (name type)} params )))
   ([query type]
-   (search query type []))
+   (search query type [] {}))
   ([query]
    (search query :note)))
